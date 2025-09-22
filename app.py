@@ -1,135 +1,233 @@
+# streamlit_rag_chatbot.py
+# Simple RAG (Retrieval-Augmented Generation) chatbot built with Streamlit + OpenAI.
+# Features:
+# - Upload your own PDF or TXT files
+# - Automatic text extraction + chunking
+# - Create embeddings using OpenAI Embeddings
+# - Very small in-memory vector store (no external DB required)
+# - Retrieve top-k chunks and build a context to send to the LLM
+# - Minimal, easy-to-run single-file Streamlit app
+
 import streamlit as st
+import openai
+import numpy as np
+from typing import List, Dict, Tuple
 import os
-from dotenv import load_dotenv
-from langchain_openai import AzureOpenAIEmbeddings, AzureChatOpenAI
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import ConversationalRetrievalChain
-from langchain_community.vectorstores import FAISS
-from langchain.memory import ConversationBufferMemory
+from pypdf import PdfReader
+import tempfile
 
-# Load environment variables
-load_dotenv()
+# -----------------------------
+# Helper functions
+# -----------------------------
 
-# --- Azure OpenAI Configuration ---
-os.environ["AZURE_OPENAI_API_KEY"] = os.getenv("FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz")
-os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("https://jvtay-mff428jo-eastus2.openai.azure.com/")
-os.environ["AZURE_OPENAI_API_VERSION"] = "2025-01-01-preview" # Or your desired version
-os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"] = os.getenv("gpt41nano-test")
-os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"] = os.getenv("text-embedding-3-small")
+def extract_text_from_pdf(file) -> str:
+    try:
+        reader = PdfReader(file)
+        text = []
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            text.append(page_text)
+        return "\n\n".join(text)
+    except Exception as e:
+        return ""
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="Azure OpenAI RAG Chatbot", page_icon="🤖")
-st.title("🤖 Azure OpenAI RAG Chatbot")
 
-# Initialize chat history in session state if not present
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "vectorstore" not in st.session_state:
-    st.session_state.vectorstore = None
-if "conversation_chain" not in st.session_state:
-    st.session_state.conversation_chain = None
+def read_text_file(file) -> str:
+    try:
+        raw = file.read()
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="ignore")
+        return raw
+    except Exception:
+        return ""
 
-# --- Functions for document processing and RAG setup ---
 
-@st.cache_resource(show_spinner=False)
-def get_embeddings_model():
-    return AzureOpenAIEmbeddings(
-        azure_deployment=os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
-        openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],
-        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-    )
-
-@st.cache_resource(show_spinner=False)
-def get_llm_model():
-    return AzureChatOpenAI(
-        azure_deployment=os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
-        openai_api_version=os.environ["AZURE_OPENAI_API_VERSION"],
-        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-        temperature=0.7,
-    )
-
-def get_document_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    chunks = text_splitter.split_text(text)
+def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    # Simple character-based chunker
+    if not text:
+        return []
+    chunks = []
+    start = 0
+    text_len = len(text)
+    while start < text_len:
+        end = min(start + chunk_size, text_len)
+        chunk = text[start:end]
+        chunks.append(chunk.strip())
+        start += chunk_size - overlap
     return chunks
 
-def create_vectorstore(text_chunks, embeddings_model):
-    with st.spinner("Creating knowledge base..."):
-        vectorstore = FAISS.from_texts(text_chunks, embedding=embeddings_model)
-    st.success("Knowledge base created!")
-    return vectorstore
 
-def get_conversation_chain(vectorstore, llm_model):
-    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
-    conversation_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm_model,
-        retriever=vectorstore.as_retriever(),
-        memory=memory
-    )
-    return conversation_chain
+def get_embeddings(openai_client, texts: List[str], model: str = "text-embedding-3-small") -> List[List[float]]:
+    # Batch call to OpenAI embeddings
+    embeddings = []
+    # The OpenAI Python library accepts list input and returns data for each
+    resp = openai_client.Embedding.create(model=model, input=texts)
+    for item in resp.data:
+        embeddings.append(item.embedding)
+    return embeddings
 
-# --- File Uploader ---
+
+def normalize(v: np.ndarray) -> np.ndarray:
+    norm = np.linalg.norm(v)
+    return v / (norm + 1e-10)
+
+
+def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.dot(a, b))
+
+
+def retrieve_top_k(query_embedding: List[float], store: List[Dict], k: int = 3) -> List[Dict]:
+    if not store:
+        return []
+    q = normalize(np.array(query_embedding))
+    scores = []
+    for item in store:
+        vec = np.array(item["embedding"])
+        vec = normalize(vec)
+        score = cosine_sim(q, vec)
+        scores.append(score)
+    idxs = np.argsort(scores)[::-1][:k]
+    results = [store[i] for i in idxs]
+    for i, r in enumerate(results):
+        r["score"] = float(scores[idxs[i]])
+    return results
+
+# -----------------------------
+# Streamlit app
+# -----------------------------
+
+st.set_page_config(page_title="Simple RAG Chatbot", layout="wide")
+st.title("📚 Simple RAG Chatbot — Streamlit + OpenAI")
+
+# API key input
+if "openai_api_key" not in st.session_state:
+    st.session_state.openai_api_key = ""
+
 with st.sidebar:
-    st.header("Upload Documents")
-    uploaded_files = st.file_uploader(
-        "Upload your PDF or TXT files here and click 'Process'",
-        type=["pdf", "txt"],
-        accept_multiple_files=True
-    )
-    process_button = st.button("Process Documents")
+    st.header("Configuration")
+    api_key = st.text_input("OpenAI API key", type="password", value=st.session_state.openai_api_key)
+    if api_key:
+        st.session_state.openai_api_key = api_key
 
-    if process_button and uploaded_files:
-        raw_text = ""
-        for uploaded_file in uploaded_files:
-            file_extension = uploaded_file.name.split('.')[-1].lower()
-            if file_extension == "pdf":
-                loader = PyPDFLoader(uploaded_file.name)
-                with open(uploaded_file.name, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                docs = loader.load()
-                for doc in docs:
-                    raw_text += doc.page_content
-                os.remove(uploaded_file.name) # Clean up temp file
-            elif file_extension == "txt":
-                raw_text += uploaded_file.read().decode("utf-8")
+    embedding_model = st.selectbox("Embedding model", options=["text-embedding-3-small", "text-embedding-3-large"], index=0)
+    chat_model = st.selectbox("Chat model", options=["gpt-3.5-turbo", "gpt-4o-mini"], index=0)
+    top_k = st.number_input("Top K retrieved chunks", min_value=1, max_value=10, value=3)
+    chunk_size = st.number_input("Chunk size (chars)", min_value=200, max_value=4000, value=1000, step=100)
+    chunk_overlap = st.number_input("Chunk overlap (chars)", min_value=0, max_value=2000, value=200, step=50)
 
-        if raw_text:
-            text_chunks = get_document_chunks(raw_text)
-            embeddings = get_embeddings_model()
-            st.session_state.vectorstore = create_vectorstore(text_chunks, embeddings)
-            llm = get_llm_model()
-            st.session_state.conversation_chain = get_conversation_chain(st.session_state.vectorstore, llm)
-            st.session_state.messages.append({"role": "assistant", "content": "Documents processed! You can now ask questions."})
-            st.rerun() # Rerun to update the chat UI with the new message
-        else:
-            st.warning("No text extracted from the uploaded files.")
-    elif process_button and not uploaded_files:
-        st.warning("Please upload some files first!")
+st.markdown("Upload PDF or TXT files (you can upload multiple). The app will index them in memory.")
+uploaded_files = st.file_uploader("Upload PDF / TXT files", type=["pdf", "txt"], accept_multiple_files=True)
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+if "store" not in st.session_state:
+    # store will be a list of dicts: {"content":..., "metadata":{...}, "embedding":[...]}
+    st.session_state.store = []
 
-# --- Chat Input and Response ---
-if prompt := st.chat_input("Ask a question about the documents..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    if st.session_state.conversation_chain:
-        with st.spinner("Thinking..."):
-            response = st.session_state.conversation_chain({'question': prompt})
-            st.session_state.chat_history = response['chat_history']
-            bot_response = response['answer']
-
-        with st.chat_message("assistant"):
-            st.markdown(bot_response)
-        st.session_state.messages.append({"role": "assistant", "content": bot_response})
+# Indexing step
+if uploaded_files:
+    if not st.session_state.openai_api_key:
+        st.warning("Please set your OpenAI API key in the sidebar before uploading files.")
     else:
-        with st.chat_message("assistant"):
-            st.markdown("Please upload and process documents first in the sidebar.")
-        st.session_state.messages.app
+        # Initialize openai client
+        openai.api_key = st.session_state.openai_api_key
+        progress_text = st.empty()
+        progress_bar = st.progress(0)
+        total_files = len(uploaded_files)
+        file_idx = 0
+        new_chunks = []
+        new_metadatas = []
+        for f in uploaded_files:
+            file_idx += 1
+            progress_text.text(f"Processing {f.name} ({file_idx}/{total_files})")
+            if f.type == "application/pdf" or f.name.lower().endswith('.pdf'):
+                text = extract_text_from_pdf(f)
+            else:
+                text = read_text_file(f)
+
+            chunks = chunk_text(text, chunk_size=chunk_size, overlap=chunk_overlap)
+            for i, c in enumerate(chunks):
+                new_chunks.append(c)
+                new_metadatas.append({"source": f.name, "chunk_index": i})
+            progress_bar.progress(int(file_idx / total_files * 100))
+
+        if new_chunks:
+            # create embeddings in batches (we simply send all at once here; for very large uploads, batching is recommended)
+            with st.spinner("Creating embeddings..."):
+                embeddings = get_embeddings(openai, new_chunks, model=embedding_model)
+
+            # add to store
+            for txt, meta, emb in zip(new_chunks, new_metadatas, embeddings):
+                st.session_state.store.append({"content": txt, "metadata": meta, "embedding": emb})
+
+            st.success(f"Indexed {len(new_chunks)} chunks from {total_files} file(s).")
+        else:
+            st.info("No text found in the uploaded files.")
+
+# Chat UI
+st.subheader("Ask questions about the uploaded documents")
+col1, col2 = st.columns([3, 1])
+with col1:
+    user_question = st.text_area("Your question", height=120)
+    ask_button = st.button("Ask")
+with col2:
+    st.write("\n")
+    if st.session_state.store:
+        st.write(f"Indexed chunks: {len(st.session_state.store)}")
+        # show sample sources
+        sources = {}
+        for item in st.session_state.store:
+            src = item["metadata"]["source"]
+            sources[src] = sources.get(src, 0) + 1
+        st.write("**Sources:**")
+        for s, c in sources.items():
+            st.write(f"- {s}: {c} chunks")
+
+if ask_button:
+    if not st.session_state.openai_api_key:
+        st.warning("Set your OpenAI API key in the sidebar first.")
+    elif not user_question:
+        st.warning("Please type a question.")
+    elif not st.session_state.store:
+        st.warning("No indexed documents found. Upload files first.")
+    else:
+        openai.api_key = st.session_state.openai_api_key
+        with st.spinner("Retrieving..."):
+            q_emb = get_embeddings(openai, [user_question], model=embedding_model)[0]
+            top_chunks = retrieve_top_k(q_emb, st.session_state.store, k=int(top_k))
+
+        # Build context
+        context = "\n\n".join([f"Source: {c['metadata']['source']} (chunk {c['metadata']['chunk_index']})\n{c['content']}" for c in top_chunks])
+
+        system_prompt = (
+            "You are a helpful assistant. Use the provided CONTEXT to answer the user question. "
+            "If the answer is not contained in the context, say you don't know and avoid hallucination. "
+            "Cite the source filename and chunk index when referencing the document."
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"CONTEXT:\n{context}\n---\nQUESTION:\n{user_question}"},
+        ]
+
+        with st.spinner("Generating answer from the LLM..."):
+            try:
+                resp = openai.ChatCompletion.create(model=st.session_state.get('chat_model', chat_model), messages=messages, max_tokens=512, temperature=0.0)
+                answer = resp.choices[0].message.content
+            except Exception as e:
+                st.error(f"OpenAI API error: {e}")
+                answer = None
+
+        if answer:
+            st.markdown("### Answer")
+            st.write(answer)
+
+            st.markdown("---")
+            st.markdown("### Retrieved snippets (ranked)")
+            for i, c in enumerate(top_chunks, start=1):
+                st.write(f"**{i}. Source:** {c['metadata']['source']} (chunk {c['metadata']['chunk_index']}) — score: {c.get('score', 0):.4f}")
+                st.write(c['content'][:1000] + ("..." if len(c['content']) > 1000 else ""))
+
+# Persisting minimal state instructions
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Notes**:\n- This app uses a tiny in-memory vector store. It's not persistent across sessions.\n- For production, use a vector DB (Chroma, Pinecone, Weaviate) and batching for embeddings.\n- Keep your API key safe.")
+
+
