@@ -48,7 +48,8 @@ embeddings = AzureOpenAIEmbeddings(
 )
 
 
-vectordb = Chroma.from_documents(split_docs, embeddings)
+# vectordb = Chroma.from_documents(split_docs, embeddings)
+vectordb = Chroma.from_documents(split_docs, embeddings, persist_directory=None)
 
 retriever = vectordb.as_retriever()
 
