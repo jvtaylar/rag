@@ -11,7 +11,7 @@ from langchain.schema import Document
 # --------------------------
 AZURE_OPENAI_ENDPOINT = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
 AZURE_OPENAI_KEY = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
-AZURE_CHAT_DEPLOYMENT = "gpt-35-turbo"          # e.g., gpt-35-turbo
+AZURE_CHAT_DEPLOYMENT = "gpt41nano-test"          # e.g., gpt-35-turbo
 AZURE_EMBEDDING_DEPLOYMENT = "text-embedding-ada-002"  # e.g., text-embedding-ada-002
 AZURE_API_VERSION = "2024-12-01-preview"
 
