@@ -16,7 +16,7 @@ os.environ["AZURE_OPENAI_API_KEY"] = os.getenv("FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbL
 os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("https://jvtay-mff428jo-eastus2.openai.azure.com/")
 os.environ["AZURE_OPENAI_API_VERSION"] = "2025-01-01-preview" # Or your desired version
 os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"] = os.getenv("gpt41nano-test")
-os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"] = os.getenv("gpt-4.1-nano")
+os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"] = os.getenv("text-embedding-3-small")
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Azure OpenAI RAG Chatbot", page_icon="🤖")
