@@ -1,6 +1,6 @@
-chainlit
-chromadb
+streamlit
 openai
-tiktoken
 langchain
-python-dotenv
+langchain-openai
+chromadb
+tiktoken
