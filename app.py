@@ -2,7 +2,6 @@ import streamlit as st
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-# from langchain_community.vectorstores import Chroma
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
@@ -48,9 +47,6 @@ embeddings = AzureOpenAIEmbeddings(
     api_version=AZURE_API_VERSION
 )
 
-
-# vectordb = Chroma.from_documents(split_docs, embeddings)
-# vectordb = Chroma.from_documents(split_docs, embeddings, persist_directory=None)
 vectordb = FAISS.from_documents(split_docs, embeddings)
 retriever = vectordb.as_retriever()
 
@@ -58,10 +54,10 @@ retriever = vectordb.as_retriever()
 # Define LLM (Azure OpenAI)
 # --------------------------
 llm = AzureChatOpenAI(
-    azure_deployment=AZURE_DEPLOYMENT_NAME,
-    openai_api_version="2024-02-01",
-    openai_api_key=AZURE_OPENAI_KEY,
-    openai_api_base=AZURE_OPENAI_ENDPOINT,
+    azure_deployment=AZURE_CHAT_DEPLOYMENT,
+    api_key=AZURE_OPENAI_KEY,
+    azure_endpoint=AZURE_OPENAI_ENDPOINT,
+    api_version=AZURE_API_VERSION,
     temperature=0
 )
 
