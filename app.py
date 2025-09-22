@@ -1,6 +1,4 @@
 import streamlit as st
-import openai
-import os
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
@@ -11,20 +9,20 @@ from langchain.schema import Document
 # --------------------------
 # Azure OpenAI Configuration
 # --------------------------
-
-AZURE_EMBEDDING_NAME = "text-embedding-ada-002" # "text-embedding-3-small", "text-embedding-3-large"  # e.g., text-embedding-ada-002
 AZURE_OPENAI_ENDPOINT = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
 AZURE_OPENAI_KEY = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
+AZURE_CHAT_DEPLOYMENT = "gpt-35-turbo"          # e.g., gpt-35-turbo
+AZURE_EMBEDDING_DEPLOYMENT = "text-embedding-ada-002"  # e.g., text-embedding-ada-002
+AZURE_API_VERSION = "2025-01-01-preview"
+
+# openai.api_type = "azure"
+# openai.api_base = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
+# openai.api_version = "2025-01-01-preview"
+# openai.api_key = ""
 
 
-openai.api_type = "azure"
-openai.api_base = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
-openai.api_version = "2025-01-01-preview"
-openai.api_key = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
 
-
-
-DEPLOYMENT_NAME = "gpt-35-turbo"
+# DEPLOYMENT_NAME = "gpt-35-turbo"
 
 # --------------------------
 # Load Documents (Sample FAQ/Manuals)
