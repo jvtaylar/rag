@@ -1,6 +1,5 @@
 import streamlit as st
 import openai
-import os
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
@@ -11,18 +10,16 @@ from langchain.schema import Document
 # --------------------------
 # Azure OpenAI Configuration
 # --------------------------
-AZURE_OPENAI_ENDPOINT = "https://<your-endpoint>.openai.azure.com/"
-AZURE_OPENAI_KEY = "<your-key>"
-AZURE_DEPLOYMENT_NAME = "<your-deployment-name>"   # example: gpt-35-turbo
-AZURE_EMBEDDING_NAME = "<your-embedding-deployment>"  # example: text-embedding-ada-002
-
 openai.api_type = "azure"
-openai.api_base = AZURE_OPENAI_ENDPOINT
-openai.api_key = AZURE_OPENAI_KEY
-openai.api_version = "2024-02-01"
+openai.api_base = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
+openai.api_version = "2025-01-01-preview"
+openai.api_key = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"   # 🔑 put your key here
+
+DEPLOYMENT_NAME = "gpt-35-turbo"
+EMBEDDING_NAME = "text-embedding-ada-002"
 
 # --------------------------
-# Load Documents (Sample FAQ/Manuals)
+# Example documents
 # --------------------------
 docs = [
     Document(page_content="TESDA provides technical vocational education and training in the Philippines."),
@@ -31,43 +28,35 @@ docs = [
 ]
 
 # --------------------------
-# Split and Embed Documents
+# Split & store docs in vector DB
 # --------------------------
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
-split_docs = text_splitter.split_documents(docs)
+splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
+split_docs = splitter.split_documents(docs)
 
 embeddings = AzureOpenAIEmbeddings(
-    model=AZURE_EMBEDDING_NAME,
-    azure_deployment=AZURE_EMBEDDING_NAME,
-    openai_api_key=AZURE_OPENAI_KEY,
-    openai_api_base=AZURE_OPENAI_ENDPOINT
+    model=EMBEDDING_NAME,
+    azure_deployment=EMBEDDING_NAME
 )
 
 vectordb = Chroma.from_documents(split_docs, embeddings)
-
 retriever = vectordb.as_retriever()
 
 # --------------------------
-# Define LLM (Azure OpenAI)
+# LLM (Azure OpenAI)
 # --------------------------
 llm = AzureChatOpenAI(
-    azure_deployment=AZURE_DEPLOYMENT_NAME,
-    openai_api_version="2024-02-01",
-    openai_api_key=AZURE_OPENAI_KEY,
-    openai_api_base=AZURE_OPENAI_ENDPOINT,
+    azure_deployment=DEPLOYMENT_NAME,
     temperature=0
 )
 
 # --------------------------
-# Create RetrievalQA Chain
+# RetrievalQA
 # --------------------------
 prompt_template = """
-You are a helpful assistant. Use the following documents to answer the question.
+Use the context below to answer the question.
 
 Context: {context}
-
 Question: {question}
-
 Answer:
 """
 
@@ -87,8 +76,8 @@ qa_chain = RetrievalQA.from_chain_type(
 # --------------------------
 st.title("💬 TESDA RAG Chatbot (Azure OpenAI + Streamlit)")
 
-user_query = st.text_input("Ask me anything about TESDA:")
+query = st.text_input("Ask a question:")
 
-if user_query:
-    response = qa_chain.run(user_query)
-    st.markdown(f"**Answer:** {response}")
+if query:
+    answer = qa_chain.run(query)
+    st.write("**Answer:**", answer)
