@@ -1,16 +1,25 @@
 import streamlit as st
+import openai
+import os
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
 # --------------------------
 # Azure OpenAI Configuration
 # --------------------------
+AZURE_OPENAI_ENDPOINT = "https://<your-endpoint>.openai.azure.com/"
+AZURE_OPENAI_KEY = "<your-key>"
+AZURE_DEPLOYMENT_NAME = "<your-deployment-name>"   # example: gpt-35-turbo
+AZURE_EMBEDDING_NAME = "<your-embedding-deployment>"  # example: text-embedding-ada-002
 
-
+openai.api_type = "azure"
+openai.api_base = AZURE_OPENAI_ENDPOINT
+openai.api_key = AZURE_OPENAI_KEY
+openai.api_version = "2024-02-01"
 
 # --------------------------
 # Load Documents (Sample FAQ/Manuals)
@@ -28,24 +37,24 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
 split_docs = text_splitter.split_documents(docs)
 
 embeddings = AzureOpenAIEmbeddings(
-    azure_deployment="text-embedding-ada-002",
-    model="text-embedding-ada-002",
-    api_key="FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz",
-    azure_endpoint="https://jvtay-mff428jo-eastus2.openai.azure.com/",
-    api_version="2024-12-01-preview"
+    model=AZURE_EMBEDDING_NAME,
+    azure_deployment=AZURE_EMBEDDING_NAME,
+    openai_api_key=AZURE_OPENAI_KEY,
+    openai_api_base=AZURE_OPENAI_ENDPOINT
 )
 
-vectordb = FAISS.from_documents(split_docs, embeddings)
+vectordb = Chroma.from_documents(split_docs, embeddings)
+
 retriever = vectordb.as_retriever()
 
 # --------------------------
 # Define LLM (Azure OpenAI)
 # --------------------------
 llm = AzureChatOpenAI(
-    azure_deployment="text-embedding-ada-002",
-    api_key="FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz",
-    azure_endpoint="https://jvtay-mff428jo-eastus2.openai.azure.com/",
-    api_version="2024-12-01-preview",
+    azure_deployment=AZURE_DEPLOYMENT_NAME,
+    openai_api_version="2024-02-01",
+    openai_api_key=AZURE_OPENAI_KEY,
+    openai_api_base=AZURE_OPENAI_ENDPOINT,
     temperature=0
 )
 
