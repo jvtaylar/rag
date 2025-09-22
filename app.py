@@ -9,11 +9,8 @@ from langchain.schema import Document
 # --------------------------
 # Azure OpenAI Configuration
 # --------------------------
-AZURE_OPENAI_ENDPOINT = "https://jvtay-mff428jo-eastus2.cognitiveservices.azure.com/"
-AZURE_OPENAI_KEY = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
-AZURE_CHAT_DEPLOYMENT = "gpt41nano-test"          # e.g., gpt-35-turbo
-AZURE_EMBEDDING_DEPLOYMENT = "text-embedding-ada-002"  # e.g., text-embedding-ada-002
-AZURE_API_VERSION = "2024-12-01-preview"
+
+
 
 # --------------------------
 # Load Documents (Sample FAQ/Manuals)
@@ -31,11 +28,11 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
 split_docs = text_splitter.split_documents(docs)
 
 embeddings = AzureOpenAIEmbeddings(
-    azure_deployment=AZURE_EMBEDDING_DEPLOYMENT,
-    model=AZURE_EMBEDDING_DEPLOYMENT,
-    api_key=AZURE_OPENAI_KEY,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_version=AZURE_API_VERSION
+    azure_deployment="text-embedding-ada-002",
+    model="text-embedding-ada-002",
+    api_key="FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz",
+    azure_endpoint="https://jvtay-mff428jo-eastus2.openai.azure.com/",
+    api_version="2024-12-01-preview"
 )
 
 vectordb = FAISS.from_documents(split_docs, embeddings)
@@ -45,10 +42,10 @@ retriever = vectordb.as_retriever()
 # Define LLM (Azure OpenAI)
 # --------------------------
 llm = AzureChatOpenAI(
-    azure_deployment=AZURE_CHAT_DEPLOYMENT,
-    api_key=AZURE_OPENAI_KEY,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_version=AZURE_API_VERSION,
+    azure_deployment="text-embedding-ada-002",
+    api_key="FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz",
+    azure_endpoint="https://jvtay-mff428jo-eastus2.openai.azure.com/",
+    api_version="2024-12-01-preview",
     temperature=0
 )
 
