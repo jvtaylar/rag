@@ -2,7 +2,8 @@ import streamlit as st
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import Chroma
+# from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
@@ -49,8 +50,8 @@ embeddings = AzureOpenAIEmbeddings(
 
 
 # vectordb = Chroma.from_documents(split_docs, embeddings)
-vectordb = Chroma.from_documents(split_docs, embeddings, persist_directory=None)
-
+# vectordb = Chroma.from_documents(split_docs, embeddings, persist_directory=None)
+vectordb = FAISS.from_documents(split_docs, embeddings)
 retriever = vectordb.as_retriever()
 
 # --------------------------
