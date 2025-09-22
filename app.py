@@ -1,61 +1,94 @@
+import streamlit as st
+import openai
 import os
-import chainlit as cl
-from dotenv import load_dotenv
-
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain_chroma import Chroma
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.document_loaders import TextLoader
 from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
+from langchain_community.vectorstores import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import Document
 
-# Load environment variables
-load_dotenv()
+# --------------------------
+# Azure OpenAI Configuration
+# --------------------------
+AZURE_OPENAI_ENDPOINT = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
+AZURE_OPENAI_KEY = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
+AZURE_DEPLOYMENT_NAME = "gpt-35-turbo"   # example: gpt-35-turbo
+AZURE_EMBEDDING_NAME = "text-embedding-ada-002"  # example: text-embedding-ada-002
 
-# Azure OpenAI settings
-azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+openai.api_type = "azure"
+openai.api_base = AZURE_OPENAI_ENDPOINT
+openai.api_key = AZURE_OPENAI_KEY
+openai.api_version = "2025-01-01-preview"
 
-# Initialize Azure OpenAI LLM
-llm = AzureChatOpenAI(
-    openai_api_key=azure_api_key,
-    azure_endpoint=azure_endpoint,
-    deployment_name=azure_deployment,
-    openai_api_version=azure_api_version,
-    temperature=0,
-)
+# --------------------------
+# Load Documents (Sample FAQ/Manuals)
+# --------------------------
+docs = [
+    Document(page_content="TESDA provides technical vocational education and training in the Philippines."),
+    Document(page_content="TESDA offers assessment and certification for skilled workers."),
+    Document(page_content="You can apply for TESDA scholarships through their official website."),
+]
 
-# Initialize embeddings
+# --------------------------
+# Split and Embed Documents
+# --------------------------
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
+split_docs = text_splitter.split_documents(docs)
+
 embeddings = AzureOpenAIEmbeddings(
-    model="text-embedding-3-small",
-    openai_api_key=azure_api_key,
-    azure_endpoint=azure_endpoint,
-    openai_api_version=azure_api_version,
+    model=AZURE_EMBEDDING_NAME,
+    azure_deployment=AZURE_EMBEDDING_NAME,
+    openai_api_key=AZURE_OPENAI_KEY,
+    openai_api_base=AZURE_OPENAI_ENDPOINT
 )
 
-# Load documents
-loader = TextLoader("docs/faq.txt")
-docs = loader.load()
+vectordb = Chroma.from_documents(split_docs, embeddings)
 
-# Split text
-splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-splits = splitter.split_documents(docs)
+retriever = vectordb.as_retriever()
 
-# Create embeddings & vectorstore
-vectorstore = Chroma.from_documents(splits, embeddings, persist_directory="./chroma_db")
+# --------------------------
+# Define LLM (Azure OpenAI)
+# --------------------------
+llm = AzureChatOpenAI(
+    azure_deployment=AZURE_DEPLOYMENT_NAME,
+    openai_api_version="2024-02-01",
+    openai_api_key=AZURE_OPENAI_KEY,
+    openai_api_base=AZURE_OPENAI_ENDPOINT,
+    temperature=0
+)
 
-# Retrieval-based QA
-qa = RetrievalQA.from_chain_type(
+# --------------------------
+# Create RetrievalQA Chain
+# --------------------------
+prompt_template = """
+You are a helpful assistant. Use the following documents to answer the question.
+
+Context: {context}
+
+Question: {question}
+
+Answer:
+"""
+
+PROMPT = PromptTemplate(
+    input_variables=["context", "question"],
+    template=prompt_template,
+)
+
+qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
-    retriever=vectorstore.as_retriever()
+    retriever=retriever,
+    chain_type_kwargs={"prompt": PROMPT}
 )
 
-@cl.on_chat_start
-async def start():
-    await cl.Message(content="👋 Hello! Ask me anything from the FAQs.").send()
+# --------------------------
+# Streamlit UI
+# --------------------------
+st.title("💬 TESDA RAG Chatbot (Azure OpenAI + Streamlit)")
 
-@cl.on_message
-async def main(message: str):
-    response = qa.run(message)
-    await cl.Message(content=response).send()
+user_query = st.text_input("Ask me anything about TESDA:")
+
+if user_query:
+    response = qa_chain.run(user_query)
+    st.markdown(f"**Answer:** {response}")
