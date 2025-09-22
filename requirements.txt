@@ -1,6 +1,5 @@
-streamlit
-openai
-langchain
-langchain-openai
-chromadb
-tiktoken
+streamlit>=1.20.0
+openai>=0.27.0
+PyPDF2>=3.0.0
+scikit-learn>=1.0.0
+numpy>=1.21.0
