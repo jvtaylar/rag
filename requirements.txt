@@ -1,8 +1,5 @@
 streamlit
 openai
-python-dotenv
+numpy
 pypdf
-langchain
-langchain-openai
-langchain-community
-tiktoken
+python-dotenv # optional, if you want to load .env for your API key
