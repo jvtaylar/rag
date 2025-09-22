@@ -13,16 +13,7 @@ AZURE_OPENAI_ENDPOINT = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
 AZURE_OPENAI_KEY = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
 AZURE_CHAT_DEPLOYMENT = "gpt-35-turbo"          # e.g., gpt-35-turbo
 AZURE_EMBEDDING_DEPLOYMENT = "text-embedding-ada-002"  # e.g., text-embedding-ada-002
-AZURE_API_VERSION = "2025-01-01-preview"
-
-# openai.api_type = "azure"
-# openai.api_base = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
-# openai.api_version = "2025-01-01-preview"
-# openai.api_key = ""
-
-
-
-# DEPLOYMENT_NAME = "gpt-35-turbo"
+AZURE_API_VERSION = "2024-02-01"
 
 # --------------------------
 # Load Documents (Sample FAQ/Manuals)
