@@ -11,11 +11,18 @@ from langchain.schema import Document
 # --------------------------
 # Azure OpenAI Configuration
 # --------------------------
+
+AZURE_EMBEDDING_NAME = "text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"  # e.g., text-embedding-ada-002
+AZURE_OPENAI_ENDPOINT = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
+AZURE_OPENAI_KEY = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
+
+
 openai.api_type = "azure"
 openai.api_base = "https://jvtay-mff428jo-eastus2.openai.azure.com/"
 openai.api_version = "2025-01-01-preview"
 openai.api_key = "FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz"
-AZURE_EMBEDDING_NAME = "text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"  # e.g., text-embedding-ada-002
+
+
 
 DEPLOYMENT_NAME = "gpt-35-turbo"
 
