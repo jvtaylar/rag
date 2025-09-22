@@ -12,11 +12,11 @@ from langchain.memory import ConversationBufferMemory
 load_dotenv()
 
 # --- Azure OpenAI Configuration ---
-os.environ["AZURE_OPENAI_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
-os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
-os.environ["AZURE_OPENAI_API_VERSION"] = "2024-02-01" # Or your desired version
-os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"] = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
-os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"] = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
+os.environ["AZURE_OPENAI_API_KEY"] = os.getenv("FOObvelUv1Ubbw0ZlEb3NPCBYDbdXWbLhzyckQAA9cP3Ofhgi8KWJQQJ99BIACHYHv6XJ3w3AAAAACOGoHUz")
+os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("https://jvtay-mff428jo-eastus2.openai.azure.com/")
+os.environ["AZURE_OPENAI_API_VERSION"] = "2025-01-01-preview" # Or your desired version
+os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"] = os.getenv("gpt41nano-test")
+os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"] = os.getenv("gpt-4.1-nano")
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Azure OpenAI RAG Chatbot", page_icon="🤖")
